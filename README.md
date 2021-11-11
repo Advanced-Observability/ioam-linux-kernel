@@ -149,20 +149,28 @@ Aramis$ sysctl -wq net.ipv6.conf.eth0.ioam6_enabled=1
 
 If **Alpha** (the sender) wants to send traffic to **Beta** (the receiver),
 packets will go through the IOAM domain where **Athos** will insert an IOAM
-option (Pre-allocated Trace) inside a Hop-by-hop. RFC8200 does not allow direct
-insertion for in-transit traffic. Therefore, an ip6ip6 encapsulation is applied
-to carry IOAM data (the tunnel destination will be **Aramis**, to prevent IOAM
-data from leaking the domain). In this example, we will only require the first
-bit of the trace type (hop_limit+node_id) but you could select whatever trace
-type you want as long as you adapt the "size" parameter (which is, basically,
-the pre-allocated size in bytes as a 4-byte multiple). The correspondng
-configuration for **Athos** is as follows:
+option (Pre-allocated Trace) inside a Hop-by-hop. The IOAM insertion must be
+enabled on **Athos** before compiling its kernel:
+
+```
+CONFIG_IPV6_IOAM6_LWTUNNEL=y
+```
+
+*RFC8200* does not allow direct insertion for in-transit traffic. Therefore, an
+ip6ip6 encapsulation is applied to carry IOAM data (the tunnel destination will
+be **Aramis**, to prevent IOAM data from leaking the domain). In this example,
+we will only require the first bit of the trace type (hop_limit+node_id) but you
+could select whatever trace type you want as long as you adapt the "size"
+parameter (which is, basically, the pre-allocated size in bytes as a 4-byte
+multiple). Note that you could also use another mode (inline, encap, auto)
+depending on your use case. For this use case, the corresponding configuration
+for **Athos** is as follows:
 
 ```
 $ ip -6 route add db03::/64 encap ioam6 mode encap tundst db02::2 trace prealloc type 0x800000 ns 123 size 12 dev eth1
 ```
 
-In this use case, **Athos** encapsulates IOAM data inside an outter IPv6 header,
+As a result, **Athos** encapsulates IOAM data inside an outter IPv6 header,
 leading to an IPv6-in-IPv6 packet. Therefore, IPv6 tunnel decapsulation must be
 enabled on **Aramis** with the following commands:
 
